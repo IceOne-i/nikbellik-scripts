@@ -106,7 +106,7 @@ EOF
 }
 
 if [ "$1" == "remove" ]; then
-    if ! systemctl list-units --full -all | grep -q "teamspeak.service"; then
+    if [ ! -d "/opt/teamspeak" ]; then
         echo "❌ TeamSpeak не установлен."
         exit 1
     else
@@ -114,7 +114,7 @@ if [ "$1" == "remove" ]; then
     fi
 else
     # Проверка, установлен ли TeamSpeak
-    if systemctl list-units --full -all | grep -q "teamspeak.service"; then
+    if [ -d "/opt/teamspeak" ]; then
         echo "⚠ TeamSpeak уже установлен!"
         read -p "Хотите удалить его? (y/n): " choice
         case "$choice" in
