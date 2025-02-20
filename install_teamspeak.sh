@@ -43,7 +43,7 @@ install_teamspeak() {
     apt-get update -qq >/dev/null 2>&1
 
     log "Полное обновление системы..."
-    apt-get full-upgrade -y -qq >/dev/null 2>&1
+    apt-get full-upgrade -y -qq >/dev/null 2>&1  # Флаг -y для автоматического подтверждения
 
     install_package qemu-guest-agent
     install_package bzip2
