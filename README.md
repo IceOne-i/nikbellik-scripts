@@ -6,7 +6,7 @@
 sudo su -c "wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh | bash -s -- 0000 0000 0000"
 ```
 
-🔹 Замените `0000 0000 0000` на ваш лицензионный ключ, если требуется.
+🔹 Замените `0000 0000 0000` на ваши порты.
 
 ## 🗑️ Удаление TeamSpeak
 
