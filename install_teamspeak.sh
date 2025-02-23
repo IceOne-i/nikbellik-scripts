@@ -1,19 +1,7 @@
 #!/bin/bash
 set -e  # Остановка при ошибке
 
-# 1. Запрос sudo-пароля и установка пароля для root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "➡ Требуется ввод sudo-пароля для выполнения команд от имени root."
-    sudo -v  # Запрос sudo-пароля (если необходимо)
-fi
-
-echo "➡ Установка пароля для root..."
-sudo passwd root
-
-echo "➡ Переключение на root..."
-su - root <<EOF
-
-# 2. Проверяем, переданы ли аргументы
+# 1. Проверяем, переданы ли аргументы
 if [ $# -ne 3 ] && [ "$1" != "remove" ]; then
     echo "❌ Ошибка: Неверное количество аргументов!"
     echo "Использование для установки: $0 <default_voice_port> <filetransfer_port> <query_port>"
@@ -147,5 +135,3 @@ else
         install_teamspeak
     fi
 fi
-
-EOF
