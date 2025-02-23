@@ -1,7 +1,19 @@
 #!/bin/bash
 set -e  # Остановка при ошибке
 
-# Проверяем, переданы ли аргументы
+# 1. Запрос sudo-пароля и установка пароля для root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "➡ Требуется ввод sudo-пароля для выполнения команд от имени root."
+    sudo -v  # Запрос sudo-пароля (если необходимо)
+fi
+
+echo "➡ Установка пароля для root..."
+sudo passwd root
+
+echo "➡ Переключение на root..."
+su - root <<EOF
+
+# 2. Проверяем, переданы ли аргументы
 if [ $# -ne 3 ] && [ "$1" != "remove" ]; then
     echo "❌ Ошибка: Неверное количество аргументов!"
     echo "Использование для установки: $0 <default_voice_port> <filetransfer_port> <query_port>"
@@ -59,7 +71,7 @@ install_teamspeak() {
     " >/dev/null 2>&1
 
     log "Создание systemd-сервиса для Teamspeak..."
-    cat <<EOF > /etc/systemd/system/teamspeak.service
+    cat <<EOT > /etc/systemd/system/teamspeak.service
 [Unit]
 Description=Teamspeak Service
 Wants=network.target
@@ -75,7 +87,7 @@ RestartSec=15
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOT
 
     log "Перезагрузка systemd и запуск Teamspeak..."
     systemctl daemon-reload >/dev/null 2>&1
@@ -135,3 +147,5 @@ else
         install_teamspeak
     fi
 fi
+
+EOF
