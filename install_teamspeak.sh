@@ -29,13 +29,13 @@ install_package() {
 
 remove_teamspeak() {
     log "Удаление TeamSpeak..."
-    systemctl stop teamspeak >/dev/null 2>&1
-    systemctl disable teamspeak >/dev/null 2>&1
+    systemctl stop teamspeak >/dev/null 2>&1 || true
+    systemctl disable teamspeak >/dev/null 2>&1 || true
     userdel -r teamspeak >/dev/null 2>&1 || true
     rm -rf /opt/teamspeak
     rm -f /etc/systemd/system/teamspeak.service
     systemctl daemon-reload >/dev/null 2>&1
-    log "TeamSpeak успешно удален!"
+    log "✅ TeamSpeak успешно удален!"
 }
 
 install_teamspeak() {
@@ -51,14 +51,14 @@ install_teamspeak() {
     log "Создание пользователя teamspeak..."
     useradd -mrd /opt/teamspeak teamspeak -s "$(which bash)" >/dev/null 2>&1 || true
 
-    log "Скачивание и установка Teamspeak..."
+    log "Скачивание и установка TeamSpeak..."
     su - teamspeak -c "
         wget -q https://files.teamspeak-services.com/releases/server/3.13.7/teamspeak3-server_linux_amd64-3.13.7.tar.bz2 -O /opt/teamspeak/teamspeak-server.tar.bz2 &&
         tar xvfj /opt/teamspeak/teamspeak-server.tar.bz2 -C /opt/teamspeak --strip-components 1 &&
         touch /opt/teamspeak/.ts3server_license_accepted
     " >/dev/null 2>&1
 
-    log "Создание systemd-сервиса для Teamspeak..."
+    log "Создание systemd-сервиса для TeamSpeak..."
     cat <<EOT > /etc/systemd/system/teamspeak.service
 [Unit]
 Description=Teamspeak Service
@@ -77,7 +77,7 @@ RestartSec=15
 WantedBy=multi-user.target
 EOT
 
-    log "Перезагрузка systemd и запуск Teamspeak..."
+    log "Перезагрузка systemd и запуск TeamSpeak..."
     systemctl daemon-reload >/dev/null 2>&1
     systemctl enable --now teamspeak >/dev/null 2>&1
 
@@ -103,35 +103,50 @@ EOT
     echo "🔹 Статус сервиса: $(systemctl is-active teamspeak)"
     echo "🔹 Токен администратора: $TOKEN"
     echo "------------------------------------------------------------"
+
+    # Вопрос о выключении машины
+    set +e
+    read -p "🔴 Хотите выключить сервер? (y/n): " shutdown_choice
+    set -e
+
+    case "$shutdown_choice" in
+        y|Y )
+            log "Выключение системы..."
+            shutdown -h now
+            ;;
+        n|N )
+            log "Сервер остается включенным."
+            ;;
+        * )
+            log "❌ Неверный ввод. Сервер остается включенным."
+            ;;
+    esac
 }
 
-if [ "$1" == "remove" ]; then
-    if [ ! -d "/opt/teamspeak" ]; then
-        echo "❌ TeamSpeak не установлен."
-        exit 1
-    else
-        remove_teamspeak
-    fi
-else
-    # Проверка, установлен ли TeamSpeak
-    if [ -d "/opt/teamspeak" ]; then
-        echo "⚠ TeamSpeak уже установлен!"
-        read -p "Хотите удалить его? (y/n): " choice
-        case "$choice" in
-            y|Y )
-                remove_teamspeak
-                exit 0
-                ;;
-            n|N )
-                echo "🚪 Выход из установки."
-                exit 0
-                ;;
-            * )
-                echo "❌ Неверный ввод. Отмена установки."
-                exit 1
-                ;;
-        esac
-    else
-        install_teamspeak
-    fi
+# Проверка, установлен ли TeamSpeak
+if [ -d "/opt/teamspeak" ]; then
+    echo "⚠ TeamSpeak уже установлен!"
+
+    # Отключаем аварийное завершение перед вводом пользователя
+    set +e
+    read -p "Хотите удалить его? (y/n): " choice
+    set -e  # Включаем обратно
+
+    case "$choice" in
+        y|Y )
+            remove_teamspeak
+            exit 0
+            ;;
+        n|N )
+            echo "🚪 Выход из установки."
+            exit 0
+            ;;
+        * )
+            echo "❌ Неверный ввод. Отмена установки."
+            exit 1
+            ;;
+    esac
 fi
+
+# Если дошли до этого момента, значит TeamSpeak не установлен
+install_teamspeak
