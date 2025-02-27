@@ -1,10 +1,16 @@
 #!/bin/bash
 
-echo "Начало установки: $(date)"
+# Проверка, запущен ли скрипт от root
+if [[ $(id -u) -ne 0 ]]; then
+    echo -e "\033[1;31mОшибка: Скрипт должен быть запущен от root. Используйте sudo.\033[0m"
+    exit 1
+fi
+
+echo "\033[1;32mНачало установки: $(date)\033[0m"
 
 # Функция для логирования
 log() {
-    echo "$(date) - $1"
+    echo -e "\033[1;34m$(date) - $1\033[0m"
 }
 
 # Функция для проверки установки пакета
@@ -19,19 +25,19 @@ file_exists() {
 
 # Обновление системы
 log "Обновление системы"
-apt-get update -y && apt-get full-upgrade -y
+apt-get update -y -qq >/dev/null 2>&1 && apt-get full-upgrade -y -qq >/dev/null 2>&1
 
 # Установка qemu-guest-agent
 if ! is_installed "qemu-guest-agent"; then
     log "Установка qemu-guest-agent"
-    apt-get install -y qemu-guest-agent
+    apt-get install -y -qq qemu-guest-agent >/dev/null 2>&1
 else
     log "qemu-guest-agent уже установлен"
 fi
 
 # Установка MCSManager
 log "Установка MCSManager"
-sudo su -c "wget -qO- https://script.mcsmanager.com/setup_cn.sh | bash"
+sudo su -c "wget -qO- https://script.mcsmanager.com/setup_cn.sh | bash" >/dev/null 2>&1
 
 # Отключение службы MCSManager
 log "Отключение MCSManager"
@@ -39,43 +45,25 @@ systemctl stop mcsm-web.service
 systemctl disable mcsm-web.service
 
 # Установка необходимых пакетов
-if ! is_installed "wget" || ! is_installed "unzip"; then
-    log "Установка wget и unzip"
-    apt-get install -y wget unzip
-else
-    log "wget и unzip уже установлены"
-fi
+for package in wget unzip openjdk-8-jdk openjdk-17-jdk openjdk-21-jdk; do
+    if ! is_installed "$package"; then
+        log "Установка $package"
+        apt-get install -y -qq "$package" >/dev/null 2>&1
+    else
+        log "$package уже установлен"
+    fi
+done
 
-if ! is_installed "openjdk-8-jdk"; then
-    log "Установка Java 8"
-    apt-get install -y openjdk-8-jdk
-else
-    log "Java 8 уже установлена"
-fi
-
+# Установка Java 16, если она не установлена
 if [ ! -d "/usr/lib/jvm/java-16-openjdk-amd64" ]; then
     log "Загрузка и установка Java 16"
     wget -q https://download.java.net/openjdk/jdk16/ri/openjdk-16+36_linux-x64_bin.tar.gz
     mkdir -p /usr/lib/jvm
-    sudo tar -xvf openjdk-16+36_linux-x64_bin.tar.gz -C /usr/lib/jvm
+    sudo tar -xvf openjdk-16+36_linux-x64_bin.tar.gz -C /usr/lib/jvm >/dev/null 2>&1
     sudo mv /usr/lib/jvm/jdk-16 /usr/lib/jvm/java-16-openjdk-amd64
     sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-16-openjdk-amd64/bin/java 1
 else
     log "Java 16 уже установлена"
-fi
-
-if ! is_installed "openjdk-17-jdk"; then
-    log "Установка Java 17"
-    apt-get install -y openjdk-17-jdk
-else
-    log "Java 17 уже установлена"
-fi
-
-if ! is_installed "openjdk-21-jdk"; then
-    log "Установка Java 21"
-    apt-get install -y openjdk-21-jdk
-else
-    log "Java 21 уже установлена"
 fi
 
 # Создание скрипта запуска Minecraft, если он не существует
@@ -134,4 +122,4 @@ else
     log "Перезагрузка пропущена"
 fi
 
-log "Настройка завершена"
+log "\033[1;32mНастройка завершена\033[0m"
