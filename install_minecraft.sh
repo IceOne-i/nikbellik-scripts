@@ -17,10 +17,6 @@ file_exists() {
     [[ -f "$1" ]]
 }
 
-# Переход в режим root
-log "Переход в root"
-su - root <<EOF
-
 # Обновление системы
 log "Обновление системы"
 apt-get update -y && apt-get full-upgrade -y
@@ -139,4 +135,3 @@ else
 fi
 
 log "Настройка завершена"
-EOF
