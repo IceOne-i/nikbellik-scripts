@@ -96,9 +96,9 @@ echo "Обнаружена версия Minecraft: \$MC_VERSION"
 get_java_version() {
     case "\$1" in
         1.12*|1.13*|1.14*|1.15*) echo "/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java" ;;
-        1.16*|1.17*) echo "/usr/lib/jvm/java-16-openjdk-amd64/jre/bin/java" ;;
-        1.18*|1.19*) echo "/usr/lib/jvm/java-17-openjdk-amd64/jre/bin/java" ;;
-        1.20*|1.21*) echo "/usr/lib/jvm/java-21-openjdk-amd64/jre/bin/java" ;;
+        1.16*|1.17*) echo "/usr/lib/jvm/java-16-openjdk-amd64/bin/java" ;;
+        1.18*|1.19*) echo "/usr/lib/jvm/java-17-openjdk-amd64/bin/java" ;;
+        1.20*|1.21*) echo "/usr/lib/jvm/java-21-openjdk-amd64/bin/java" ;;
         *) echo "java" ;;
     esac
 }
