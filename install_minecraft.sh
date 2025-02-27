@@ -17,10 +17,6 @@ file_exists() {
     [[ -f "$1" ]]
 }
 
-# Запрос пароля для root
-log "Установка пароля для root"
-sudo passwd root
-
 # Переход в режим root
 log "Переход в root"
 su - root <<EOF
