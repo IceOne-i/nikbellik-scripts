@@ -132,26 +132,13 @@ EOT
 }
 
 # Проверка, установлен ли TeamSpeak
-if [ -d "/opt/teamspeak" ]; then
-    printf "\033[33;1m⚠ TeamSpeak уже установлен!\033[0m\n"
-    printf "\033[32;1mХотите удалить его? (y/n)\033[0m\n"
-
-    while true; do
-        read -r -p '' choice
-        case "$choice" in
-            y|Y )
-                remove_teamspeak
-                exit 0
-                ;;
-            n|N )
-                echo "🚪 Выход из установки."
-                exit 0
-                ;;
-            * )
-                echo "❌ Пожалуйста, введите y или n"
-                ;;
-        esac
-    done
+if [ "$1" == "remove" ]; then
+    if [ ! -d "/opt/teamspeak" ]; then
+        echo "❌ Ошибка: TeamSpeak не установлен!"
+        exit 1
+    fi
+    remove_teamspeak
+    exit 0
 fi
 
 # Если дошли до этого момента, значит TeamSpeak не установлен
