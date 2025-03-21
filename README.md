@@ -11,7 +11,7 @@
 Чтобы установить TeamSpeak, выполните следующую команду:
 
 ```bash
-sudo su -c "wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh | bash -s -- 0000 0000 0000"
+sh <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) -- 0000 0000 0000
 ```
 
 🔹 **Примечание:** Замените `0000 0000 0000` на порты, которые вы хотите использовать. Обычно:
@@ -24,7 +24,7 @@ sudo su -c "wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scrip
 Если вам нужно удалить TeamSpeak, выполните команду:
 
 ```bash
-sudo su -c "wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh | bash -s remove"
+sh <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) remove
 ```
 
 ---
