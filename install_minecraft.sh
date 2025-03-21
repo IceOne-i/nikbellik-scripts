@@ -1,19 +1,27 @@
 #!/bin/bash
+set -e  # Остановка при ошибке
 
 # Проверка, запущен ли скрипт от root
-if [[ $(id -u) -ne 0 ]]; then
-    echo -e "\033[1;31mОшибка: Скрипт должен быть запущен от root. Используйте sudo.\033[0m"
+if [ "$(id -u)" -ne 0 ]; then
+    echo "❌ Ошибка: Скрипт должен быть запущен от root!"
     exit 1
 fi
 
-echo "\033[1;32mНачало установки: $(date)\033[0m"
-
-# Функция для логирования
 log() {
-    echo -e "\033[1;34m$(date) - $1\033[0m"
+    echo "➡ $1"
 }
 
-# Функция для проверки установки пакета
+# Функция для установки пакетов
+install_package() {
+    if dpkg -s "$1" &> /dev/null; then
+        log "$1 уже установлен, пропускаем..."
+    else
+        log "Установка $1..."
+        apt-get install -y -qq "$1" >/dev/null 2>&1
+    fi
+}
+
+# Проверка установки пакета
 is_installed() {
     dpkg -l | grep -q "^ii  $1 "
 }
@@ -23,11 +31,14 @@ file_exists() {
     [[ -f "$1" ]]
 }
 
-# Обновление системы
-log "Обновление системы"
-apt-get update -y -qq >/dev/null 2>&1 && apt-get full-upgrade -y -qq >/dev/null 2>&1
+# Установка необходимых пакетов
+install_package wget
+install_package unzip
+install_package openjdk-8-jdk
+install_package openjdk-17-jdk
+install_package openjdk-21-jdk
 
-# Установка qemu-guest-agent
+# Установка qemu-guest-agent, если не установлен
 if ! is_installed "qemu-guest-agent"; then
     log "Установка qemu-guest-agent"
     apt-get install -y -qq qemu-guest-agent >/dev/null 2>&1
@@ -37,31 +48,21 @@ fi
 
 # Установка MCSManager
 log "Установка MCSManager"
-sudo su -c "wget -qO- https://script.mcsmanager.com/setup_cn.sh | bash" >/dev/null 2>&1
+wget -qO- https://script.mcsmanager.com/setup_cn.sh | bash >/dev/null 2>&1
 
 # Отключение службы MCSManager
 log "Отключение MCSManager"
 systemctl stop mcsm-web.service
 systemctl disable mcsm-web.service
 
-# Установка необходимых пакетов
-for package in wget unzip openjdk-8-jdk openjdk-17-jdk openjdk-21-jdk; do
-    if ! is_installed "$package"; then
-        log "Установка $package"
-        apt-get install -y -qq "$package" >/dev/null 2>&1
-    else
-        log "$package уже установлен"
-    fi
-done
-
 # Установка Java 16, если она не установлена
 if [ ! -d "/usr/lib/jvm/java-16-openjdk-amd64" ]; then
     log "Загрузка и установка Java 16"
     wget -q https://download.java.net/openjdk/jdk16/ri/openjdk-16+36_linux-x64_bin.tar.gz
     mkdir -p /usr/lib/jvm
-    sudo tar -xvf openjdk-16+36_linux-x64_bin.tar.gz -C /usr/lib/jvm >/dev/null 2>&1
-    sudo mv /usr/lib/jvm/jdk-16 /usr/lib/jvm/java-16-openjdk-amd64
-    sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-16-openjdk-amd64/bin/java 1
+    tar -xvf openjdk-16+36_linux-x64_bin.tar.gz -C /usr/lib/jvm >/dev/null 2>&1
+    mv /usr/lib/jvm/jdk-16 /usr/lib/jvm/java-16-openjdk-amd64
+    update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-16-openjdk-amd64/bin/java 1
 else
     log "Java 16 уже установлена"
 fi
@@ -113,13 +114,24 @@ else
     log "Скрипт start.sh уже существует, пропускаем создание"
 fi
 
-# Спрашиваем, нужно ли перезагрузить систему
-read -p "Перезагрузить систему сейчас? (y/n): " REBOOT
-if [[ "\$REBOOT" == "y" ]]; then
-    log "Перезагрузка системы"
-    reboot
-else
-    log "Перезагрузка пропущена"
-fi
+# Спрашиваем, нужно ли выключить сервер
+while true; do
+    printf "\033[32;1m🔴 Хотите выключить сервер? (y/n)\033[0m\n"
+    read -r -p '' shutdown_choice
+    case "$shutdown_choice" in
+        y|Y )
+            log "Выключение системы..."
+            shutdown -h now
+            break
+            ;;
+        n|N )
+            log "Сервер остается включенным."
+            break
+            ;;
+        * )
+            echo "❌ Пожалуйста, введите y или n"
+            ;;
+    esac
+done
 
 log "\033[1;32mНастройка завершена\033[0m"
