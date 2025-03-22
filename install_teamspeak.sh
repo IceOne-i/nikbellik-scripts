@@ -7,7 +7,7 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# 1. Проверяем, переданы ли аргументы
+# Проверка аргументов
 if [ $# -ne 3 ] && [ "$1" != "remove" ]; then
     echo "❌ Ошибка: Неверное количество аргументов!"
     echo "Использование для установки: $0 <default_voice_port> <filetransfer_port> <query_port>"
@@ -25,7 +25,7 @@ log() {
 }
 
 install_package() {
-    if dpkg -s "$1" &> /dev/null; then
+    if dpkg -l | grep -qw "$1"; then
         log "$1 уже установлен, пропускаем..."
     else
         log "Установка $1..."
@@ -34,6 +34,11 @@ install_package() {
 }
 
 remove_teamspeak() {
+    if [ ! -d "/opt/teamspeak" ]; then
+        echo "❌ Ошибка: TeamSpeak не установлен!"
+        exit 1
+    fi
+
     log "Удаление TeamSpeak..."
     systemctl stop teamspeak >/dev/null 2>&1 || true
     systemctl disable teamspeak >/dev/null 2>&1 || true
@@ -49,7 +54,7 @@ install_teamspeak() {
     apt-get update -qq >/dev/null 2>&1
 
     log "Полное обновление системы..."
-    apt-get full-upgrade -y -qq >/dev/null 2>&1  # Флаг -y для автоматического подтверждения
+    apt-get full-upgrade -y -qq >/dev/null 2>&1
 
     install_package qemu-guest-agent
     install_package bzip2
@@ -131,15 +136,34 @@ EOT
     done
 }
 
-# Проверка, установлен ли TeamSpeak
-if [ "$1" == "remove" ]; then
-    if [ ! -d "/opt/teamspeak" ]; then
-        echo "❌ Ошибка: TeamSpeak не установлен!"
-        exit 1
-    fi
+# Проверка, если аргумент "remove"
+if [ "$1" = "remove" ]; then
     remove_teamspeak
     exit 0
 fi
 
-# Если дошли до этого момента, значит TeamSpeak не установлен
+# Проверка, установлен ли уже TeamSpeak
+if [ -d "/opt/teamspeak" ]; then
+    printf "\033[33;1m⚠ TeamSpeak уже установлен!\033[0m\n"
+    printf "\033[32;1mХотите удалить его? (y/n)\033[0m\n"
+
+    while true; do
+        read -r -p '' choice
+        case "$choice" in
+            y|Y )
+                remove_teamspeak
+                exit 0
+                ;;
+            n|N )
+                echo "🚪 Выход из установки."
+                exit 0
+                ;;
+            * )
+                echo "❌ Пожалуйста, введите y или n"
+                ;;
+        esac
+    done
+fi
+
+# Если TeamSpeak не установлен, выполняем установку
 install_teamspeak
