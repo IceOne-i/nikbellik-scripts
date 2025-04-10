@@ -7,17 +7,45 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# 2. Проверяем, переданы ли аргументы
-if [ $# -ne 3 ] && [ "$1" != "remove" ]; then
-    echo "❌ Ошибка: Неверное количество аргументов!"
-    echo "Использование для установки: $0 <default_voice_port> <filetransfer_port> <query_port>"
+# 2. Проверяем аргументы
+if [ $# -ne 1 ] && [ "$1" != "remove" ]; then
+    echo "❌ Ошибка: требуется один аргумент!"
+    echo "Использование для установки: $0 <XXX> (где XXX — первые три цифры порта)"
     echo "Использование для удаления: $0 remove"
     exit 1
 fi
 
-VOICE_PORT=$1
-FILETRANSFER_PORT=$2
-QUERY_PORT=$3
+# Если аргумент — "remove", вызываем удаление
+if [ "$1" == "remove" ]; then
+    remove_teamspeak() {
+        log "Удаление TeamSpeak..."
+        systemctl stop teamspeak >/dev/null 2>&1 || true
+        systemctl disable teamspeak >/dev/null 2>&1 || true
+        userdel -r teamspeak >/dev/null 2>&1 || true
+        rm -rf /opt/teamspeak
+        rm -f /etc/systemd/system/teamspeak.service
+        systemctl daemon-reload >/dev/null 2>&1
+        log "✅ TeamSpeak успешно удален!"
+    }
+
+    log() {
+        echo "➡ $1"
+    }
+
+    remove_teamspeak
+    exit 0
+fi
+
+# Генерация портов
+PREFIX=$1
+if ! [[ $PREFIX =~ ^[0-9]{3}$ ]]; then
+    echo "❌ Ошибка: префикс должен состоять из трёх цифр"
+    exit 1
+fi
+
+VOICE_PORT="${PREFIX}7"
+FILETRANSFER_PORT="${PREFIX}1"
+QUERY_PORT="${PREFIX}2"
 TOKEN="Не найден"
 
 log() {
@@ -33,22 +61,10 @@ install_package() {
     fi
 }
 
-remove_teamspeak() {
-    log "Удаление TeamSpeak..."
-    systemctl stop teamspeak >/dev/null 2>&1 || true
-    systemctl disable teamspeak >/dev/null 2>&1 || true
-    userdel -r teamspeak >/dev/null 2>&1 || true
-    rm -rf /opt/teamspeak
-    rm -f /etc/systemd/system/teamspeak.service
-    systemctl daemon-reload >/dev/null 2>&1
-    log "✅ TeamSpeak успешно удален!"
-}
-
 install_teamspeak() {
     log "Обновление списка пакетов..."
     apt-get update -qq >/dev/null 2>&1
 
-    # Получаем список пакетов, которые можно обновить
     PACKAGES=$(apt list --upgradable 2>/dev/null | awk -F/ 'NR>1 {print $1}')
 
     if [ -z "$PACKAGES" ]; then
@@ -59,11 +75,8 @@ install_teamspeak() {
     fi
 
     log "Полное обновление системы..."
-    
-    # Запускаем обновление и записываем результат
     apt-get full-upgrade -y | tee /tmp/upgrade_log.txt >/dev/null 2>&1
 
-    # Собираем списки успешных и неудачных обновлений
     UPDATED=$(grep "Setting up" /tmp/upgrade_log.txt | awk '{print $3}')
     FAILED=$(grep -i "failed\|error" /tmp/upgrade_log.txt | awk '{print $NF}')
 
@@ -127,14 +140,13 @@ EOT
     log "Поиск токена администратора..."
     if ls /opt/teamspeak/logs/ >/dev/null 2>&1; then
         TOKEN=$(grep -i "token=" /opt/teamspeak/logs/* | sed -E 's/.*token=//')
-        TOKEN=${TOKEN:-"Не найден"}  # Если переменная пустая, записать "Не найден"
+        TOKEN=${TOKEN:-"Не найден"}
     else
         TOKEN="Не найден (папка логов отсутствует)"
     fi
 
     log "✅ Установка завершена!"
 
-    # Итоговое сообщение
     echo "------------------------------------------------------------"
     echo "✅ TeamSpeak успешно установлен!"
     echo "🔹 Голосовой порт: $VOICE_PORT"
@@ -144,7 +156,6 @@ EOT
     echo "🔹 Токен администратора: $TOKEN"
     echo "------------------------------------------------------------"
 
-    # Вопрос о выключении машины
     while true; do
         printf "\033[32;1m🔴 Хотите выключить сервер? (y/n)\033[0m\n"
         read -r -p '' shutdown_choice
@@ -188,5 +199,5 @@ if [ -d "/opt/teamspeak" ]; then
     done
 fi
 
-# Если дошли до этого момента, значит TeamSpeak не установлен
+# Установка TeamSpeak
 install_teamspeak
