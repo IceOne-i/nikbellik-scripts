@@ -13,7 +13,7 @@
 Чтобы установить TeamSpeak, выполните следующую команду:
 
 ```bash
-sh <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) -- 000
+bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) 000
 ```
 
 🔹 **Примечание:** Укажите только первые **три цифры** порта. Скрипт автоматически добавит:
@@ -36,7 +36,7 @@ sh <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs
 Если вам нужно удалить TeamSpeak, выполните команду:
 
 ```bash
-sh <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) remove
+bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) remove
 ```
 
 📌 **Что делает скрипт удаления:**
