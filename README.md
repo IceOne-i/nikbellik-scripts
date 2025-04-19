@@ -13,7 +13,7 @@
 Чтобы установить TeamSpeak, выполните следующую команду:
 
 ```bash
-bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) 000
+bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) 000
 ```
 
 🔹 **Примечание:** Укажите только первые **три цифры** порта. Скрипт автоматически добавит:
@@ -36,7 +36,7 @@ bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/re
 Если вам нужно удалить TeamSpeak, выполните команду:
 
 ```bash
-bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) remove
+bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) remove
 ```
 
 📌 **Что делает скрипт удаления:**
@@ -53,7 +53,7 @@ bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/re
 Для установки сервера Minecraft используйте следующую команду:
 
 ```bash
-bash <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_minecraft.sh)
+bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_minecraft.sh)
 ```
 
 📌 **Что делает скрипт установки Minecraft:**
