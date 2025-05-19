@@ -13,7 +13,7 @@
 Чтобы установить TeamSpeak, выполните следующую команду:
 
 ```bash
-bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) 000
+bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) -- 000
 ```
 
 🔹 **Примечание:** Укажите только первые **три цифры** порта. Скрипт автоматически добавит:
@@ -27,6 +27,7 @@ bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/r
 - Создаёт пользователя `teamspeak` и скачивает TeamSpeak Server 3.13.7
 - Автоматически принимает лицензию
 - Создаёт systemd-сервис
+- Настраивает ежедневное авто‑обновление системы через cron (`/etc/cron.d/auto_update_system`)
 - Запускает TeamSpeak
 - Показывает лог установки с портами и токеном администратора
 - Предлагает выключить сервер после завершения
@@ -36,13 +37,14 @@ bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/r
 Если вам нужно удалить TeamSpeak, выполните команду:
 
 ```bash
-bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) remove
+bash <(wget -O - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) remove
 ```
 
 📌 **Что делает скрипт удаления:**
 - Останавливает и отключает сервис TeamSpeak
 - Удаляет пользователя `teamspeak` и директорию установки
 - Удаляет systemd-сервис
+- Отключает и удаляет cron-задачу авто‑обновления системы
 
 ---
 
@@ -53,7 +55,7 @@ bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/r
 Для установки сервера Minecraft используйте следующую команду:
 
 ```bash
-bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_minecraft.sh)
+bash <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_minecraft.sh)
 ```
 
 📌 **Что делает скрипт установки Minecraft:**
@@ -71,3 +73,4 @@ bash <(wget -qO - https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/r
 📢 **Важно:**
 - Все скрипты необходимо запускать от имени `root`
 - Скрипты автоматически обновят все пакеты на сервере перед установкой
+- 
