@@ -11,7 +11,6 @@
 - Обновление системы (`update_and_upgrade_system`)
 - Автообновление (`setup_auto_update`, `remove_auto_update`)
 - Подтверждение выключения (`confirm_shutdown`)
-- 
 ---
 
 ## 🎧 Установка TeamSpeak Server
