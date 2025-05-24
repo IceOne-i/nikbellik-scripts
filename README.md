@@ -20,13 +20,13 @@
 ### ✅ Установка
 
 ```bash
-bash <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) -- 962
+bash <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) -- 00
 ```
 
-- `962` — префикс из трёх цифр для портов:
-  - Голосовой порт: `9627`
-  - Порт передачи файлов: `9621`
-  - Query-порт: `9622`
+- `000` — префикс из трёх первых цифр для портов:
+  - Голосовой порт: `0007`
+  - Порт передачи файлов: `0001`
+  - Query-порт: `0002`
 
 ### ❌ Удаление
 
