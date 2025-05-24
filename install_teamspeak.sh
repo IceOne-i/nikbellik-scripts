@@ -12,7 +12,7 @@ set -e
 # ------------------------------
 # Подключаем утилиты из common_utils.sh
 # ------------------------------
-source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
+source <(curl -fsSL https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
 
 # ------------------------------
 # Функция удаления TeamSpeak
