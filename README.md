@@ -11,12 +11,7 @@
 - Обновление системы (`update_and_upgrade_system`)
 - Автообновление (`setup_auto_update`, `remove_auto_update`)
 - Подтверждение выключения (`confirm_shutdown`)
-
-Подключение происходит автоматически при запуске основного скрипта через:
-
-```bash
-source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
-```
+- 
 ---
 
 ## 🎧 Установка TeamSpeak Server
