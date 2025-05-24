@@ -20,7 +20,7 @@
 ### ✅ Установка
 
 ```bash
-bash <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) -- 00
+bash <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/install_teamspeak.sh) -- 000
 ```
 
 - `000` — префикс из трёх первых цифр для портов:
