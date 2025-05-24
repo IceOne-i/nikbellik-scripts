@@ -2,7 +2,7 @@
 set -e
 
 # Загрузка и исполнение утилитарного скрипта
-source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/main/common-utils.sh)
+source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
 
 # ------------------------------
 # Удаление TeamSpeak
