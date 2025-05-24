@@ -1,4 +1,3 @@
-```markdown
 # 📦 nikbellik-scripts
 
 Скрипты автоматизации для установки и управления различными сервисами на Linux-серверах.
@@ -71,4 +70,3 @@ bash <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/re
 ## 🔗 Контакты
 
 Автор: [IceOne-i](https://github.com/IceOne-i)
-```
