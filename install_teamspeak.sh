@@ -1,42 +1,8 @@
 #!/bin/bash
-set -e  # Остановка при ошибке
+set -e
 
-CRON_FILE="/etc/cron.d/auto_update_system"
-
-# ------------------------------
-# Общие функции логирования
-# ------------------------------
-log() {
-    echo "➡ $1"
-}
-
-# ------------------------------
-# Авто‑обновление системы
-# ------------------------------
-setup_auto_update() {
-    if [ -f "$CRON_FILE" ]; then
-        log "Авто‑обновление уже настроено, пропускаем..."
-    else
-        log "Настройка ежедневного авто‑обновления системы..."
-        cat <<EOT > "$CRON_FILE"
-# Ежедневное обновление системы и перезагрузка при необходимости
-0 3 * * * root apt-get update -qq && apt-get upgrade -y && \
-    if [ -f /var/run/reboot-required ]; then reboot; fi
-EOT
-        chmod 644 "$CRON_FILE"
-        log "✅ Авто‑обновление настроено (ежедневно в 03:00 МСК)"
-    fi
-}
-
-remove_auto_update() {
-    if [ -f "$CRON_FILE" ]; then
-        log "Удаление авто‑обновления системы..."
-        rm -f "$CRON_FILE"
-        log "✅ Авто‑обновление отключено."
-    else
-        log "Задача авто‑обновления не найдена, пропускаем..."
-    fi
-}
+# Загрузка и исполнение утилитарного скрипта
+source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/main/common-utils.sh)
 
 # ------------------------------
 # Удаление TeamSpeak
@@ -50,60 +16,16 @@ remove_teamspeak() {
     rm -f /etc/systemd/system/teamspeak.service
     systemctl daemon-reload >/dev/null 2>&1
 
-    # Удаляем авто‑обновление
     remove_auto_update
 
     log "✅ TeamSpeak успешно удален!"
 }
 
 # ------------------------------
-# Установка необходимых пакетов
-# ------------------------------
-install_package() {
-    if dpkg -s "$1" &> /dev/null; then
-        log "$1 уже установлен, пропускаем..."
-    else
-        log "Установка пакета: $1"
-        apt-get install -y -qq "$1" >/dev/null 2>&1
-    fi
-}
-
-# ------------------------------
-# Основная функция установки
+# Установка TeamSpeak
 # ------------------------------
 install_teamspeak() {
-    log "Обновление списка пакетов..."
-    apt-get update -qq >/dev/null 2>&1
-
-    PACKAGES=$(apt list --upgradable 2>/dev/null | awk -F/ 'NR>1 {print $1}')
-    if [ -z "$PACKAGES" ]; then
-        log "Все пакеты актуальны."
-    else
-        log "Доступны обновления для следующих пакетов:"
-        echo "$PACKAGES" | awk '{print "  - " $1}'
-    fi
-
-    log "Полное обновление системы..."
-    apt-get full-upgrade -y | tee /tmp/upgrade_log.txt >/dev/null 2>&1
-
-    UPDATED=$(grep "Setting up" /tmp/upgrade_log.txt | awk '{print $3}')
-    FAILED=$(grep -i "failed\|error" /tmp/upgrade_log.txt | awk '{print $NF}')
-
-    echo "------------------------------------------------------------"
-    echo "📌 Итог обновления системы:"
-    if [ -n "$UPDATED" ]; then
-        echo "✅ Обновлены пакеты:"
-        echo "$UPDATED" | awk '{print "  - " $1}'
-    else
-        echo "✅ Обновлены пакеты: нет"
-    fi
-    if [ -n "$FAILED" ]; then
-        echo "❌ Ошибки при обновлении:"
-        echo "$FAILED" | awk '{print "  - " $1}'
-    else
-        echo "❌ Ошибок обновления: нет"
-    fi
-    echo "------------------------------------------------------------"
+    update_and_upgrade_system
 
     install_package qemu-guest-agent
     install_package bzip2
@@ -111,7 +33,6 @@ install_teamspeak() {
     log "Создание пользователя teamspeak..."
     useradd -mrd /opt/teamspeak teamspeak -s "$(which bash)" >/dev/null 2>&1 || true
 
-    # Параметры портов
     VOICE_PORT="${PREFIX}7"
     FILETRANSFER_PORT="${PREFIX}1"
     QUERY_PORT="${PREFIX}2"
@@ -123,7 +44,7 @@ install_teamspeak() {
         touch /opt/teamspeak/.ts3server_license_accepted
     " >/dev/null 2>&1
 
-    log "Создание systemd‑сервиса для TeamSpeak..."
+    log "Создание systemd‑сервиса..."
     cat <<EOT > /etc/systemd/system/teamspeak.service
 [Unit]
 Description=Teamspeak Service
@@ -142,100 +63,57 @@ RestartSec=15
 WantedBy=multi-user.target
 EOT
 
-    log "Перезагрузка systemd и запуск TeamSpeak..."
+    log "Перезапуск systemd и старт TeamSpeak..."
     systemctl daemon-reload >/dev/null 2>&1
     systemctl enable --now teamspeak >/dev/null 2>&1
 
-    log "Ожидание генерации логов (2 секунды)..."
     sleep 2
+    TOKEN=$(grep -i "token=" /opt/teamspeak/logs/* 2>/dev/null | sed -E 's/.*token=//' || echo "Не найден")
 
-    # Получение токена
-    if ls /opt/teamspeak/logs/ >/dev/null 2>&1; then
-        TOKEN=$(grep -i "token=" /opt/teamspeak/logs/* | sed -E 's/.*token=//')
-        TOKEN=${TOKEN:-"Не найден"}
-    else
-        TOKEN="Не найден (папка логов отсутствует)"
-    fi
-
-    log "✅ Установка TeamSpeak завершена!"
     echo "------------------------------------------------------------"
-    echo "✅ TeamSpeak успешно установлен!"
+    echo "✅ TeamSpeak установлен!"
     echo "🔹 Голосовой порт: $VOICE_PORT"
     echo "🔹 Порт передачи файлов: $FILETRANSFER_PORT"
-    echo "🔹 Порт запросов: $QUERY_PORT"
-    echo "🔹 Статус сервиса: $(systemctl is-active teamspeak)"
+    echo "🔹 Query порт: $QUERY_PORT"
+    echo "🔹 Статус: $(systemctl is-active teamspeak)"
     echo "🔹 Токен администратора: $TOKEN"
     echo "------------------------------------------------------------"
 
-    # Настраиваем авто‑обновление
     setup_auto_update
-
-    # Предложение выключения
-    while true; do
-        printf "\033[32;1m🔴 Хотите выключить сервер? (y/n)\033[0m\n"
-        read -r shutdown_choice
-        case "$shutdown_choice" in
-            y|Y )
-                log "Выключение системы..."
-                shutdown -h now
-                break
-                ;;
-            n|N )
-                log "Сервер остается включенным."
-                break
-                ;;
-            * )
-                echo "❌ Пожалуйста, введите y или n"
-                ;;
-        esac
-    done
+    ask_for_shutdown
 }
 
 # ------------------------------
 # Точка входа
 # ------------------------------
-# Проверка аргумента
 if [ $# -ne 1 ] && [ "$1" != "remove" ]; then
     echo "❌ Ошибка: требуется один аргумент!"
-    echo "Использование для установки: $0 <XXX> (первые три цифры порта)"
-    echo "Использование для удаления: $0 remove"
+    echo "Использование: $0 <XXX> (три цифры порта) или $0 remove"
     exit 1
 fi
 
-# Удаление
 if [ "$1" == "remove" ]; then
     remove_teamspeak
     exit 0
 fi
 
-# Параметр префикса
 PREFIX=$1
 if ! [[ $PREFIX =~ ^[0-9]{3}$ ]]; then
-    echo "❌ Ошибка: префикс должен состоять из трёх цифр"
+    echo "❌ Префикс должен быть из трёх цифр"
     exit 1
 fi
 
-# Проверяем, не установлено ли уже
 if [ -d "/opt/teamspeak" ]; then
-    printf "\033[33;1m⚠ TeamSpeak уже установлен!\033[0m\n"
-    printf "\033[32;1mХотите удалить его? (y/n)\033[0m\n"
+    echo -e "\033[33;1m⚠ TeamSpeak уже установлен!\033[0m"
+    echo -e "\033[32;1mХотите удалить его? (y/n)\033[0m"
     while true; do
         read -r choice
         case "$choice" in
-            y|Y )
-                remove_teamspeak
-                exit 0
-                ;;
-            n|N )
-                echo "🚪 Выход."
-                exit 0
-                ;;
-            * )
-                echo "❌ Введите y или n"
-                ;;
+            y|Y ) remove_teamspeak; exit 0 ;;
+            n|N ) echo "🚪 Выход."; exit 0 ;;
+            * ) echo "❌ Введите y или n" ;;
         esac
     done
 fi
 
-# Установка
 install_teamspeak
