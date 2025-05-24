@@ -17,10 +17,6 @@
 ```bash
 source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
 ```
-
-**Расположение:**  
-https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh
-
 ---
 
 ## 🎧 Установка TeamSpeak Server
