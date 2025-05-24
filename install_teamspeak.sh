@@ -1,12 +1,9 @@
 #!/bin/bash
 set -e
 
-# Загрузка и исполнение утилитарного скрипта
-source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
+# Подключение утилит
+source <(curl -fsSL https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
 
-# ------------------------------
-# Удаление TeamSpeak
-# ------------------------------
 remove_teamspeak() {
     log "Удаление TeamSpeak..."
     systemctl stop teamspeak >/dev/null 2>&1 || true
@@ -21,9 +18,6 @@ remove_teamspeak() {
     log "✅ TeamSpeak успешно удален!"
 }
 
-# ------------------------------
-# Установка TeamSpeak
-# ------------------------------
 install_teamspeak() {
     update_and_upgrade_system
 
@@ -44,7 +38,7 @@ install_teamspeak() {
         touch /opt/teamspeak/.ts3server_license_accepted
     " >/dev/null 2>&1
 
-    log "Создание systemd‑сервиса..."
+    log "Создание systemd-сервиса для TeamSpeak..."
     cat <<EOT > /etc/systemd/system/teamspeak.service
 [Unit]
 Description=Teamspeak Service
@@ -53,7 +47,10 @@ Wants=network.target
 [Service]
 WorkingDirectory=/opt/teamspeak
 User=teamspeak
-ExecStart=/opt/teamspeak/ts3server_minimal_runscript.sh default_voice_port=$VOICE_PORT voice_ip=0.0.0.0 filetransfer_port=$FILETRANSFER_PORT filetransfer_ip=0.0.0.0 query_port=$QUERY_PORT query_ip=0.0.0.0
+ExecStart=/opt/teamspeak/ts3server_minimal_runscript.sh \
+    default_voice_port=$VOICE_PORT voice_ip=0.0.0.0 \
+    filetransfer_port=$FILETRANSFER_PORT filetransfer_ip=0.0.0.0 \
+    query_port=$QUERY_PORT query_ip=0.0.0.0
 ExecStop=/opt/teamspeak/ts3server_startscript.sh stop
 ExecReload=/opt/teamspeak/ts3server_startscript.sh restart
 Restart=always
@@ -63,32 +60,40 @@ RestartSec=15
 WantedBy=multi-user.target
 EOT
 
-    log "Перезапуск systemd и старт TeamSpeak..."
+    log "Перезагрузка systemd и запуск TeamSpeak..."
     systemctl daemon-reload >/dev/null 2>&1
     systemctl enable --now teamspeak >/dev/null 2>&1
 
     sleep 2
-    TOKEN=$(grep -i "token=" /opt/teamspeak/logs/* 2>/dev/null | sed -E 's/.*token=//' || echo "Не найден")
 
+    if ls /opt/teamspeak/logs/ >/dev/null 2>&1; then
+        TOKEN=$(grep -i "token=" /opt/teamspeak/logs/* | sed -E 's/.*token=//')
+        TOKEN=${TOKEN:-"Не найден"}
+    else
+        TOKEN="Не найден (папка логов отсутствует)"
+    fi
+
+    log "✅ Установка TeamSpeak завершена!"
     echo "------------------------------------------------------------"
-    echo "✅ TeamSpeak установлен!"
+    echo "✅ TeamSpeak успешно установлен!"
     echo "🔹 Голосовой порт: $VOICE_PORT"
     echo "🔹 Порт передачи файлов: $FILETRANSFER_PORT"
-    echo "🔹 Query порт: $QUERY_PORT"
-    echo "🔹 Статус: $(systemctl is-active teamspeak)"
+    echo "🔹 Порт запросов: $QUERY_PORT"
+    echo "🔹 Статус сервиса: $(systemctl is-active teamspeak)"
     echo "🔹 Токен администратора: $TOKEN"
     echo "------------------------------------------------------------"
 
     setup_auto_update
-    ask_for_shutdown
+
+    # Предложение выключения через confirm_shutdown()
+    confirm_shutdown
 }
 
-# ------------------------------
 # Точка входа
-# ------------------------------
 if [ $# -ne 1 ] && [ "$1" != "remove" ]; then
     echo "❌ Ошибка: требуется один аргумент!"
-    echo "Использование: $0 <XXX> (три цифры порта) или $0 remove"
+    echo "Использование для установки: $0 <XXX> (три цифры порта)"
+    echo "Использование для удаления: $0 remove"
     exit 1
 fi
 
@@ -99,7 +104,7 @@ fi
 
 PREFIX=$1
 if ! [[ $PREFIX =~ ^[0-9]{3}$ ]]; then
-    echo "❌ Префикс должен быть из трёх цифр"
+    echo "❌ Ошибка: префикс должен состоять из трёх цифр"
     exit 1
 fi
 
@@ -109,9 +114,17 @@ if [ -d "/opt/teamspeak" ]; then
     while true; do
         read -r choice
         case "$choice" in
-            y|Y ) remove_teamspeak; exit 0 ;;
-            n|N ) echo "🚪 Выход."; exit 0 ;;
-            * ) echo "❌ Введите y или n" ;;
+            y|Y )
+                remove_teamspeak
+                exit 0
+                ;;
+            n|N )
+                echo "🚪 Выход."
+                exit 0
+                ;;
+            * )
+                echo "❌ Введите y или n"
+                ;;
         esac
     done
 fi
