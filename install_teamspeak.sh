@@ -11,9 +11,8 @@ set -euo pipefail
 # ------------------------------
 # Подключаем утилиты
 # ------------------------------
-log "Загрузка общих утилит..."
 source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
-log "Утилиты загружены."
+log "Утилиты common_utils.sh загружены."
 
 # ------------------------------
 # Обработка аргументов
