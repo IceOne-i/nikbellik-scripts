@@ -11,7 +11,7 @@ set -e
 # ------------------------------
 # Подключаем утилиты
 # ------------------------------
-source <(wget -qO- https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
+source <(curl -fsSL https://raw.githubusercontent.com/IceOne-i/nikbellik-scripts/refs/heads/main/common_utils.sh)
 log "Утилиты common_utils.sh загружены."
 
 # ------------------------------
