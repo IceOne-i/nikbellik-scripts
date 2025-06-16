@@ -50,13 +50,13 @@ install_teamspeak() {
     install_package bzip2
 
     log "3. Создание пользователя teamspeak и директории"
-    install -d -o teamspeak -g teamspeak /opt/teamspeak || true
     if ! id teamspeak >/dev/null 2>&1; then
         useradd -r -d /opt/teamspeak -s /bin/bash teamspeak
         log "  - Пользователь teamspeak создан"
     else
         log "  - Пользователь teamspeak уже существует, пропуск."
     fi
+    install -d -o teamspeak -g teamspeak /opt/teamspeak
 
     log "4. Формирование портов"
     VOICE_PORT="${PREFIX}7"; log "  - Voice: $VOICE_PORT"
@@ -64,10 +64,12 @@ install_teamspeak() {
     QUERY_PORT="${PREFIX}2"; log "  - Query: $QUERY_PORT"
 
     log "5. Скачивание и распаковка TeamSpeak"
-    sudo -u teamspeak bash -c "
-      wget -q https://files.teamspeak-services.com/releases/server/3.13.7/teamspeak3-server_linux_amd64-3.13.7.tar.bz2 \
-        -O /opt/teamspeak/teamspeak-server.tar.bz2 &&
-      tar xjf /opt/teamspeak/teamspeak-server.tar.bz2 -C /opt/teamspeak --strip-components 1 &&
+    mkdir -p /opt/teamspeak
+    chown -R teamspeak:teamspeak /opt/teamspeak
+    
+    runuser -u teamspeak -- bash -c "
+      wget -q https://files.teamspeak-services.com/releases/server/3.13.7/teamspeak3-server_linux_amd64-3.13.7.tar.bz2 -O /opt/teamspeak/teamspeak-server.tar.bz2 &&
+      tar xvjf /opt/teamspeak/teamspeak-server.tar.bz2 -C /opt/teamspeak --strip-components 1 &&
       touch /opt/teamspeak/.ts3server_license_accepted
     " && log "  - Скачивание и распаковка завершены"
 
