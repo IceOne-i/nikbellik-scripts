@@ -59,12 +59,14 @@ install_teamspeak() {
     QUERY_PORT="${PREFIX}2"; log "  - Query: $QUERY_PORT"
 
     log "5. Скачивание и распаковка TeamSpeak"
+    chown -R teamspeak:teamspeak /opt/teamspeak
     su - teamspeak -c "
       wget -q https://files.teamspeak-services.com/releases/server/3.13.7/teamspeak3-server_linux_amd64-3.13.7.tar.bz2 \
         -O /opt/teamspeak/teamspeak-server.tar.bz2 &&
       tar xvjf /opt/teamspeak/teamspeak-server.tar.bz2 -C /opt/teamspeak --strip-components 1 &&
       touch /opt/teamspeak/.ts3server_license_accepted
     " && log "  - Скачивание и распаковка завершены"
+
 
     log "6. Создание systemd-сервиса"
     cat <<EOF > /etc/systemd/system/teamspeak.service
