@@ -73,41 +73,85 @@ if ! file_exists "/root/scripts/start.sh"; then
     mkdir -p /root/scripts/
     cat <<EOL > /root/scripts/start.sh
 #!/bin/bash
+set -euo pipefail
 
-if [[ \$# -ne 3 ]]; then
-    echo "Использование: \$0 <папка_сервера> <мин_память> <макс_память>"
-    exit 1
+# Проверка аргументов
+if [ $# -ne 3 ]; then
+  echo "Использование: $0 <путь_к_папке> <MIN_RAM_GB> <MAX_RAM_GB>"
+  exit 1
 fi
 
-SERVER_DIR=\$1
-MIN_MEMORY=\$2
-MAX_MEMORY=\$3
+# Параметры
+SERVER_DIR="${1%/}"
+MIN_RAM="$2"
+MAX_RAM="$3"
 
-cd "\$SERVER_DIR" || { echo "Ошибка: указанная папка не существует!"; exit 1; }
-
-JAR_FILE=\$(ls | grep -E "[0-9]+\.[0-9]+(\.[0-9]+)?-.*\.jar" | head -n 1)
-if [[ -z "\$JAR_FILE" ]]; then
-    echo "Не найден серверный файл Minecraft."
-    exit 1
+# Проверки RAM
+if ! [[ "$MIN_RAM" =~ ^[0-9]+$ && "$MAX_RAM" =~ ^[0-9]+$ ]]; then
+  echo "Ошибка: RAM должна быть целым числом (ГБ)."
+  exit 1
+fi
+if (( MIN_RAM > MAX_RAM )); then
+  echo "Ошибка: MIN_RAM ($MIN_RAM) > MAX_RAM ($MAX_RAM)."
+  exit 1
 fi
 
-MC_VERSION=\$(echo "\$JAR_FILE" | grep -oE "[0-9]+\.[0-9]+(\.[0-9]+)?")
-echo "Обнаружена версия Minecraft: \$MC_VERSION"
+# Проверка доступной памяти
+AVAIL_GB=$(free -g | awk '/^Mem:/{print $7}')
+if (( AVAIL_GB < MAX_RAM )); then
+  echo "Предупреждение: свободно $AVAIL_GB GiB, запрашиваешь $MAX_RAM GiB."
+fi
 
-get_java_version() {
-    case "\$1" in
-        1.12*|1.13*|1.14*|1.15*) echo "/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java" ;;
-        1.16*|1.17*) echo "/usr/lib/jvm/java-16-openjdk-amd64/bin/java" ;;
-        1.18*|1.19*) echo "/usr/lib/jvm/java-17-openjdk-amd64/bin/java" ;;
-        1.20*|1.21*) echo "/usr/lib/jvm/java-21-openjdk-amd64/bin/java" ;;
-        *) echo "java" ;;
-    esac
+# Переход в папку
+cd "$SERVER_DIR" || { echo "Папка $SERVER_DIR не найдена"; exit 1; }
+
+# Поиск jar с версией в имени
+JAR_FILE=$(find . -maxdepth 1 -type f -name "*.jar" \
+           | grep -E "[0-9]+\.[0-9]+(\.[0-9]+)?-.*\.jar" \
+           | head -n1 || true)
+
+if [ -z "$JAR_FILE" ]; then
+  echo "Ошибка: не найден .jar-файл вида <версия>-<имя>.jar"
+  exit 1
+fi
+
+# Извлечение версии из имени
+MC_VERSION=$(echo "$JAR_FILE" | grep -oE "[0-9]+\.[0-9]+(\.[0-9]+)?")
+echo "Обнаружена версия Minecraft: $MC_VERSION"
+
+# Выбор Java
+get_java() {
+  case "$1" in
+    1.12*|1.13*|1.14*|1.15*) echo "/usr/lib/jvm/java-8/bin/java" ;;
+    1.16*|1.17*)               echo "/usr/lib/jvm/java-16/bin/java" ;;
+    1.18*|1.19*)               echo "/usr/lib/jvm/java-17/bin/java" ;;
+    1.20*|1.21*)               echo "/usr/lib/jvm/java-21-openjdk-amd64/bin/java" ;;
+    *)                         echo "java" ;;
+  esac
 }
+JAVA_CMD=$(get_java "$MC_VERSION")
+echo "Используется Java: $JAVA_CMD"
 
-JAVA_CMD=\$(get_java_version "\$MC_VERSION")
-echo "Используется Java: \$JAVA_CMD"
+# Подготовка команды
+LAUNCH_CMD=(
+  "$JAVA_CMD"
+  "-Xms${MIN_RAM}G"
+  "-Xmx${MAX_RAM}G"
+  "-Dfile.encoding=UTF-8"
+  "-jar" "$JAR_FILE"
+  "nogui"
+)
 
-\$JAVA_CMD -Dfile.encoding=UTF-8 -Xms\$MIN_MEMORY -Xmx\$MAX_MEMORY -jar "\$JAR_FILE" nogui
+echo
+echo "=== Команда запуска ==="
+printf " %q" "${LAUNCH_CMD[@]}"
+echo
+echo "======================="
+echo
+
+# Запуск
+exec "${LAUNCH_CMD[@]}"
+
 EOL
     chmod +x /root/scripts/start.sh
 else
