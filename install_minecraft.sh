@@ -8,13 +8,13 @@ JAVA16_URL="https://download.java.net/openjdk/jdk16/ri/openjdk-16+36_linux-x64_b
 JAVA16_DIR="/usr/lib/jvm/java-16-openjdk-amd64"
 START_SCRIPT_PATH="/root/scripts/start.sh"
 
-### === Цвета для вывода ===
+### === Цвета ===
 GREEN="\033[1;32m"
 RED="\033[1;31m"
 YELLOW="\033[1;33m"
 RESET="\033[0m"
 
-### === Лог-функции ===
+### === Функции логов ===
 log() { echo -e "➡ ${GREEN}$1${RESET}"; }
 warn() { echo -e "⚠ ${YELLOW}$1${RESET}"; }
 error_exit() { echo -e "❌ ${RED}$1${RESET}" >&2; exit 1; }
@@ -24,9 +24,9 @@ if [[ "$(id -u)" -ne 0 ]]; then
     error_exit "Скрипт должен быть запущен от root!"
 fi
 
-### === Проверка интернет-соединения ===
-if ! ping -c1 -W1 google.com &>/dev/null; then
-    warn "Нет подключения к интернету — некоторые установки могут завершиться ошибкой."
+### === Проверка интернета ===
+if ! ping -c1 -W1 8.8.8.8 &>/dev/null; then
+    warn "Нет подключения к интернету — установка может завершиться ошибкой."
 fi
 
 ### === Обновление системы ===
@@ -44,7 +44,7 @@ install_package() {
     fi
 }
 
-for pkg in wget unzip curl openjdk-8-jdk openjdk-17-jdk openjdk-22-jdk qemu-guest-agent; do
+for pkg in wget unzip curl openjdk-8-jdk openjdk-17-jdk openjdk-21-jdk qemu-guest-agent; do
     install_package "$pkg"
 done
 
@@ -74,7 +74,7 @@ else
     log "Java 16 уже установлена"
 fi
 
-### === Создание стартового скрипта Minecraft ===
+### === Создание скрипта запуска Minecraft ===
 if [[ ! -f "$START_SCRIPT_PATH" ]]; then
     log "Создание скрипта запуска Minecraft..."
     mkdir -p /root/scripts
@@ -124,7 +124,7 @@ get_java() {
     1.12*|1.13*|1.14*|1.15*) echo "/usr/lib/jvm/java-8-openjdk-amd64/bin/java" ;;
     1.16*|1.17*)             echo "/usr/lib/jvm/java-16-openjdk-amd64/bin/java" ;;
     1.18*|1.19*)             echo "/usr/lib/jvm/java-17-openjdk-amd64/bin/java" ;;
-    1.20*|1.21*|1.22*)       echo "/usr/lib/jvm/java-22-openjdk-amd64/bin/java" ;;
+    1.20*|1.21*)             echo "/usr/lib/jvm/java-21-openjdk-amd64/bin/java" ;;
     *)                       echo "java" ;;
   esac
 }
@@ -155,7 +155,7 @@ else
     log "Скрипт start.sh уже существует, пропускаем."
 fi
 
-### === Предложение выключить сервер ===
+### === Завершение ===
 echo -e "\n${YELLOW}🔴 Хотите выключить сервер? (y/n)${RESET}"
 read -r shutdown_choice
 case "$shutdown_choice" in
