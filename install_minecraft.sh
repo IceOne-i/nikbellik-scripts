@@ -1,138 +1,137 @@
 #!/bin/bash
-set -e  # Остановка при ошибке
+set -euo pipefail
 
-# Проверка, запущен ли скрипт от root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "❌ Ошибка: Скрипт должен быть запущен от root!"
-    exit 1
+### === Настройки ===
+SCRIPT_VERSION="2.0"
+MCSM_INSTALL_SCRIPT="https://script.mcsmanager.com/setup_cn.sh"
+JAVA16_URL="https://download.java.net/openjdk/jdk16/ri/openjdk-16+36_linux-x64_bin.tar.gz"
+JAVA16_DIR="/usr/lib/jvm/java-16-openjdk-amd64"
+START_SCRIPT_PATH="/root/scripts/start.sh"
+
+### === Цвета для вывода ===
+GREEN="\033[1;32m"
+RED="\033[1;31m"
+YELLOW="\033[1;33m"
+RESET="\033[0m"
+
+### === Лог-функции ===
+log() { echo -e "➡ ${GREEN}$1${RESET}"; }
+warn() { echo -e "⚠ ${YELLOW}$1${RESET}"; }
+error_exit() { echo -e "❌ ${RED}$1${RESET}" >&2; exit 1; }
+
+### === Проверка root ===
+if [[ "$(id -u)" -ne 0 ]]; then
+    error_exit "Скрипт должен быть запущен от root!"
 fi
 
-log() {
-    echo "➡ $1"
-}
+### === Проверка интернет-соединения ===
+if ! ping -c1 -W1 google.com &>/dev/null; then
+    warn "Нет подключения к интернету — некоторые установки могут завершиться ошибкой."
+fi
 
-# Функция для установки пакетов
+### === Обновление системы ===
+log "Обновление системы..."
+apt-get update -qq
+apt-get upgrade -y -qq
+
+### === Установка необходимых пакетов ===
 install_package() {
-    if dpkg -s "$1" &> /dev/null; then
+    if dpkg -s "$1" &>/dev/null; then
         log "$1 уже установлен, пропускаем..."
     else
         log "Установка $1..."
-        apt-get install -y -qq "$1" >/dev/null 2>&1
+        apt-get install -y -qq "$1" >/dev/null 2>&1 || error_exit "Не удалось установить $1"
     fi
 }
 
-# Проверка установки пакета
-is_installed() {
-    dpkg -l | grep -q "^ii  $1 "
-}
+for pkg in wget unzip curl openjdk-8-jdk openjdk-17-jdk openjdk-22-jdk qemu-guest-agent; do
+    install_package "$pkg"
+done
 
-# Функция для проверки существования файла
-file_exists() {
-    [[ -f "$1" ]]
-}
+systemctl enable qemu-guest-agent --now >/dev/null 2>&1
 
-# Установка необходимых пакетов
-install_package wget
-install_package unzip
-install_package openjdk-8-jdk
-install_package openjdk-17-jdk
-install_package openjdk-21-jdk
-
-# Установка qemu-guest-agent, если не установлен
-if ! is_installed "qemu-guest-agent"; then
-    log "Установка qemu-guest-agent"
-    apt-get install -y -qq qemu-guest-agent >/dev/null 2>&1
+### === Установка MCSManager ===
+if ! command -v mcsm &>/dev/null; then
+    log "Установка MCSManager..."
+    wget -qO- "$MCSM_INSTALL_SCRIPT" | bash >/dev/null 2>&1 || warn "⚠ Не удалось установить MCSManager (проверь доступность сайта)"
 else
-    log "qemu-guest-agent уже установлен"
+    log "MCSManager уже установлен"
 fi
 
-# Установка MCSManager
-log "Установка MCSManager"
-wget -qO- https://script.mcsmanager.com/setup_cn.sh | bash >/dev/null 2>&1
+systemctl stop mcsm-web.service 2>/dev/null || true
+systemctl disable mcsm-web.service 2>/dev/null || true
 
-# Отключение службы MCSManager
-log "Отключение MCSManager"
-systemctl stop mcsm-web.service
-systemctl disable mcsm-web.service
-
-# Установка Java 16, если она не установлена
-if [ ! -d "/usr/lib/jvm/java-16-openjdk-amd64" ]; then
-    log "Загрузка и установка Java 16"
-    wget -q https://download.java.net/openjdk/jdk16/ri/openjdk-16+36_linux-x64_bin.tar.gz
+### === Установка Java 16 ===
+if [[ ! -d "$JAVA16_DIR" ]]; then
+    log "Установка Java 16..."
+    wget -q "$JAVA16_URL" -O /tmp/java16.tar.gz
     mkdir -p /usr/lib/jvm
-    tar -xvf openjdk-16+36_linux-x64_bin.tar.gz -C /usr/lib/jvm >/dev/null 2>&1
-    mv /usr/lib/jvm/jdk-16 /usr/lib/jvm/java-16-openjdk-amd64
-    update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-16-openjdk-amd64/bin/java 1
+    tar -xzf /tmp/java16.tar.gz -C /usr/lib/jvm >/dev/null 2>&1
+    mv /usr/lib/jvm/jdk-16 "$JAVA16_DIR"
+    update-alternatives --install /usr/bin/java java "$JAVA16_DIR/bin/java" 1
+    rm /tmp/java16.tar.gz
 else
     log "Java 16 уже установлена"
 fi
 
-# Создание скрипта запуска Minecraft, если он не существует
-if ! file_exists "/root/scripts/start.sh"; then
-    log "Создание скрипта запуска Minecraft"
-    mkdir -p /root/scripts/
-    cat <<EOL > /root/scripts/start.sh
+### === Создание стартового скрипта Minecraft ===
+if [[ ! -f "$START_SCRIPT_PATH" ]]; then
+    log "Создание скрипта запуска Minecraft..."
+    mkdir -p /root/scripts
+    cat <<'EOL' > "$START_SCRIPT_PATH"
 #!/bin/bash
 set -euo pipefail
 
-# Проверка аргументов
 if [ $# -ne 3 ]; then
-  echo "Использование: $0 <путь_к_папке> <MIN_RAM_GB> <MAX_RAM_GB>"
+  echo "Использование: $0 <папка_сервера> <MIN_RAM_GB> <MAX_RAM_GB>"
   exit 1
 fi
 
-# Параметры
 SERVER_DIR="${1%/}"
 MIN_RAM="$2"
 MAX_RAM="$3"
 
-# Проверки RAM
 if ! [[ "$MIN_RAM" =~ ^[0-9]+$ && "$MAX_RAM" =~ ^[0-9]+$ ]]; then
-  echo "Ошибка: RAM должна быть целым числом (ГБ)."
+  echo "Ошибка: объём RAM должен быть числом (ГБ)."
   exit 1
 fi
 if (( MIN_RAM > MAX_RAM )); then
-  echo "Ошибка: MIN_RAM ($MIN_RAM) > MAX_RAM ($MAX_RAM)."
+  echo "Ошибка: MIN_RAM > MAX_RAM."
   exit 1
 fi
 
-# Проверка доступной памяти
 AVAIL_GB=$(free -g | awk '/^Mem:/{print $7}')
 if (( AVAIL_GB < MAX_RAM )); then
-  echo "Предупреждение: свободно $AVAIL_GB GiB, запрашиваешь $MAX_RAM GiB."
+  echo "⚠ Внимание: свободно $AVAIL_GB GiB, запрашивается $MAX_RAM GiB."
 fi
 
-# Переход в папку
 cd "$SERVER_DIR" || { echo "Папка $SERVER_DIR не найдена"; exit 1; }
 
-# Поиск jar с версией в имени
 JAR_FILE=$(find . -maxdepth 1 -type f -name "*.jar" \
            | grep -E "[0-9]+\.[0-9]+(\.[0-9]+)?-.*\.jar" \
            | head -n1 || true)
 
 if [ -z "$JAR_FILE" ]; then
-  echo "Ошибка: не найден .jar-файл вида <версия>-<имя>.jar"
+  echo "Ошибка: не найден jar-файл с версией в имени!"
   exit 1
 fi
 
-# Извлечение версии из имени
 MC_VERSION=$(echo "$JAR_FILE" | grep -oE "[0-9]+\.[0-9]+(\.[0-9]+)?")
 echo "Обнаружена версия Minecraft: $MC_VERSION"
 
-# Выбор Java
 get_java() {
   case "$1" in
-    1.12*|1.13*|1.14*|1.15*) echo "/usr/lib/jvm/java-8/bin/java" ;;
-    1.16*|1.17*)               echo "/usr/lib/jvm/java-16/bin/java" ;;
-    1.18*|1.19*)               echo "/usr/lib/jvm/java-17/bin/java" ;;
-    1.20*|1.21*)               echo "/usr/lib/jvm/java-21-openjdk-amd64/bin/java" ;;
-    *)                         echo "java" ;;
+    1.12*|1.13*|1.14*|1.15*) echo "/usr/lib/jvm/java-8-openjdk-amd64/bin/java" ;;
+    1.16*|1.17*)             echo "/usr/lib/jvm/java-16-openjdk-amd64/bin/java" ;;
+    1.18*|1.19*)             echo "/usr/lib/jvm/java-17-openjdk-amd64/bin/java" ;;
+    1.20*|1.21*|1.22*)       echo "/usr/lib/jvm/java-22-openjdk-amd64/bin/java" ;;
+    *)                       echo "java" ;;
   esac
 }
+
 JAVA_CMD=$(get_java "$MC_VERSION")
 echo "Используется Java: $JAVA_CMD"
 
-# Подготовка команды
 LAUNCH_CMD=(
   "$JAVA_CMD"
   "-Xms${MIN_RAM}G"
@@ -149,33 +148,20 @@ echo
 echo "======================="
 echo
 
-# Запуск
 exec "${LAUNCH_CMD[@]}"
-
 EOL
-    chmod +x /root/scripts/start.sh
+    chmod +x "$START_SCRIPT_PATH"
 else
-    log "Скрипт start.sh уже существует, пропускаем создание"
+    log "Скрипт start.sh уже существует, пропускаем."
 fi
 
-# Спрашиваем, нужно ли выключить сервер
-while true; do
-    printf "\033[32;1m🔴 Хотите выключить сервер? (y/n)\033[0m\n"
-    read -r -p '' shutdown_choice
-    case "$shutdown_choice" in
-        y|Y )
-            log "Выключение системы..."
-            shutdown -h now
-            break
-            ;;
-        n|N )
-            log "Сервер остается включенным."
-            break
-            ;;
-        * )
-            echo "❌ Пожалуйста, введите y или n"
-            ;;
-    esac
-done
+### === Предложение выключить сервер ===
+echo -e "\n${YELLOW}🔴 Хотите выключить сервер? (y/n)${RESET}"
+read -r shutdown_choice
+case "$shutdown_choice" in
+    y|Y) log "Выключение системы..."; shutdown -h now ;;
+    n|N) log "Сервер остаётся включённым." ;;
+    *) warn "Неверный выбор, сервер остаётся включённым." ;;
+esac
 
-log "\033[1;32mНастройка завершена\033[0m"
+log "✅ Установка завершена успешно (версия скрипта $SCRIPT_VERSION)"
